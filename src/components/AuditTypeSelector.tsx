@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, ClipboardList, FileCheck, FileText, ShieldCheck, Users } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, ClipboardList, FileCheck, FileText, ShieldCheck, Users } from 'lucide-react';
 import { Audit } from "@/types/audit";
 import { getAudits } from "@/utils/auditStorage";
 
@@ -59,6 +59,30 @@ const AuditTypeSelector = ({ onSelectAudit }: AuditTypeSelectorProps) => {
     }
   };
 
+  // Calculate and determine status based on dates
+  const updateStatusDisplay = (audit: Audit): string => {
+    // If status is already closed, maintain it
+    if (audit.status === "Closed") {
+      return audit.status;
+    }
+    
+    const today = new Date();
+    const startDate = audit.startDate ? new Date(audit.startDate) : null;
+    const endDate = audit.endDate ? new Date(audit.endDate) : null;
+    
+    if (startDate && endDate) {
+      if (today < startDate) {
+        return "Preparation";
+      } else if (today >= startDate && today <= endDate) {
+        return "On-Site";
+      } else {
+        return "Monitoring";
+      }
+    }
+    
+    return audit.status || "Not Started";
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString();
@@ -86,7 +110,8 @@ const AuditTypeSelector = ({ onSelectAudit }: AuditTypeSelectorProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {audits.map((audit) => {
             const IconComponent = getAuditTypeIcon(audit.type);
-            const statusClass = getStatusColor(audit.status || "Not Started");
+            const currentStatus = updateStatusDisplay(audit);
+            const statusClass = getStatusColor(currentStatus);
             
             return (
               <Card 
@@ -104,7 +129,7 @@ const AuditTypeSelector = ({ onSelectAudit }: AuditTypeSelectorProps) => {
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{audit.reference}</span>
                         <Badge className={statusClass}>
-                          {audit.status || "Not Started"}
+                          {currentStatus}
                         </Badge>
                       </div>
                       <span>{audit.type}</span>
@@ -133,7 +158,7 @@ const AuditTypeSelector = ({ onSelectAudit }: AuditTypeSelectorProps) => {
                           <span className="font-medium block mb-1">Assigned:</span>
                           <div className="space-y-1">
                             {audit.assignedUsers.map(user => (
-                              <div key={user.id} className={user.role === "Qualified Auditor" ? "font-bold" : ""}>
+                              <div key={user.id} className={user.role === "Lead Auditor" ? "font-bold" : ""}>
                                 {user.username} ({user.role})
                               </div>
                             ))}

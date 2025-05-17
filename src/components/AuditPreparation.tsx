@@ -37,9 +37,9 @@ const AuditPreparation = ({ auditRef, onComplete }: AuditPreparationProps) => {
       const template = templates.find((t: AuditTemplate) => t.type === auditData.type);
       
       if (template) {
-        setObjective(template.objective || "");
-        setScope(template.scope || "");
-        setIntroduction(template.introduction || "");
+        setObjective(auditData.objective || template.objective || "");
+        setScope(auditData.scope || template.scope || "");
+        setIntroduction(auditData.introduction || template.introduction || "");
       }
       
       // Get historical findings
@@ -48,17 +48,38 @@ const AuditPreparation = ({ auditRef, onComplete }: AuditPreparationProps) => {
     }
   }, [auditRef]);
   
+  const updateAuditStatus = (start: string, end: string): string => {
+    const today = new Date();
+    const startDate = start ? new Date(start) : null;
+    const endDate = end ? new Date(end) : null;
+    
+    if (startDate && endDate) {
+      if (today < startDate) {
+        return "Preparation";
+      } else if (today >= startDate && today <= endDate) {
+        return "On-Site";
+      } else {
+        return "Monitoring";
+      }
+    }
+    
+    return "Preparation"; // Default if dates not set
+  };
+  
   const handleSaveAndContinue = () => {
     if (!audit) return;
     
-    // Update audit with new dates and template info
+    // Update audit with new dates, template info, and status
+    const status = updateAuditStatus(startDate, endDate);
+    
     const updatedAudit = {
       ...audit,
       startDate,
       endDate,
       objective,
       scope,
-      introduction
+      introduction,
+      status
     };
     
     saveAudit(updatedAudit);
@@ -148,6 +169,16 @@ const AuditPreparation = ({ auditRef, onComplete }: AuditPreparationProps) => {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
+            </div>
+            
+            <div className="mt-2 text-sm text-blue-600">
+              <p>Status will be automatically updated based on dates:</p>
+              <ul className="list-disc list-inside mt-1 ml-2">
+                <li>Before start date: "Preparation"</li>
+                <li>Between start and end date: "On-Site"</li>
+                <li>After end date: "Monitoring"</li>
+                <li>After report generation: "Closed"</li>
+              </ul>
             </div>
           </CardContent>
         </Card>

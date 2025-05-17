@@ -9,7 +9,7 @@ import { AuditChecklistItem, getAuditChecklist } from '@/utils/auditMatrix';
 import { exportToExcel } from '@/utils/excelExport';
 import { Check, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { getAuditByRef, getFindingsByAuditRef } from '@/utils/auditStorage';
+import { getAuditByRef, getFindingsByAuditRef, saveFindings } from '@/utils/auditStorage';
 
 interface AuditChecklistProps {
   auditRef: string;
@@ -72,31 +72,59 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
   }, [auditRef, auditType, toast]);
 
   const handleFindingChange = (id: string, checked: boolean) => {
-    setFindings(prev => ({
-      ...prev,
-      [id]: { ...prev[id], hasFinding: checked }
-    }));
+    const updatedFindings = {
+      ...findings,
+      [id]: { ...findings[id], hasFinding: checked }
+    };
+    setFindings(updatedFindings);
+    autoSaveFindings(updatedFindings);
   };
 
   const handleFindingTextChange = (id: string, value: string) => {
-    setFindings(prev => ({
-      ...prev,
-      [id]: { ...prev[id], finding: value }
-    }));
+    const updatedFindings = {
+      ...findings,
+      [id]: { ...findings[id], finding: value }
+    };
+    setFindings(updatedFindings);
   };
 
   const handleObservationChange = (id: string, value: string) => {
-    setFindings(prev => ({
-      ...prev,
-      [id]: { ...prev[id], observation: value }
-    }));
+    const updatedFindings = {
+      ...findings,
+      [id]: { ...findings[id], observation: value }
+    };
+    setFindings(updatedFindings);
   };
   
   const handleStaffInfoChange = (id: string, field: string, value: string) => {
-    setFindings(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value }
+    const updatedFindings = {
+      ...findings,
+      [id]: { ...findings[id], [field]: value }
+    };
+    setFindings(updatedFindings);
+  };
+
+  // Auto save findings when a field loses focus
+  const handleBlur = () => {
+    autoSaveFindings(findings);
+  };
+
+  const autoSaveFindings = (currentFindings: typeof findings) => {
+    // Convert findings to the format expected by saveFindings
+    const findingsToSave = Object.entries(currentFindings).map(([checklistItemId, finding]) => ({
+      id: crypto.randomUUID(),
+      auditRef,
+      checklistItemId,
+      finding: finding.finding,
+      observation: finding.observation,
+      year: new Date().getFullYear().toString(),
+      isHistorical: false,
+      staffNumber: finding.staffNumber,
+      staffName: finding.staffName,
+      staffScope: finding.staffScope
     }));
+    
+    saveFindings(findingsToSave);
   };
 
   const handleSubmit = () => {
@@ -113,6 +141,9 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
       });
       return;
     }
+
+    // Auto save final state
+    autoSaveFindings(findings);
     
     onComplete(findings);
   };
@@ -191,6 +222,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                           placeholder="Enter staff number"
                           value={findings[item.id]?.staffNumber || ""}
                           onChange={(e) => handleStaffInfoChange(item.id, "staffNumber", e.target.value)}
+                          onBlur={handleBlur}
                         />
                       </div>
                       <div className="space-y-1">
@@ -199,6 +231,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                           placeholder="Enter staff name"
                           value={findings[item.id]?.staffName || ""}
                           onChange={(e) => handleStaffInfoChange(item.id, "staffName", e.target.value)}
+                          onBlur={handleBlur}
                         />
                       </div>
                       <div className="space-y-1">
@@ -207,6 +240,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                           placeholder="Enter scope of work"
                           value={findings[item.id]?.staffScope || ""}
                           onChange={(e) => handleStaffInfoChange(item.id, "staffScope", e.target.value)}
+                          onBlur={handleBlur}
                         />
                       </div>
                     </div>
@@ -234,6 +268,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                       <Textarea
                         value={findings[item.id]?.finding || ""}
                         onChange={(e) => handleFindingTextChange(item.id, e.target.value)}
+                        onBlur={handleBlur}
                         placeholder="Describe the finding in detail"
                         className={`resize-none ${hasHistoricalFinding ? 'bg-amber-50' : ''}`}
                         rows={3}
@@ -248,6 +283,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                     <Textarea
                       value={findings[item.id]?.observation || ""}
                       onChange={(e) => handleObservationChange(item.id, e.target.value)}
+                      onBlur={handleBlur}
                       placeholder="Add any additional observations or notes"
                       className="resize-none"
                       rows={2}

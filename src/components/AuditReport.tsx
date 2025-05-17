@@ -5,10 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AuditChecklistItem, getAuditChecklist } from "@/utils/auditMatrix";
-import { exportReportToExcel } from "@/utils/excelExport";
+import { exportReportToExcel, exportReportToWord } from "@/utils/excelExport";
 import { Download, FileText, Plus, FileOutput } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAuditByRef } from "@/utils/auditStorage";
+import { getAuditByRef, saveAudit } from "@/utils/auditStorage";
 
 interface AuditReportProps {
   auditRef: string;
@@ -42,6 +42,15 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
     const compliantCount = items.length - findingCount;
     
     setSummary(`Audit ${auditRef} (${auditData?.name || "Unknown"}) identified ${findingCount} findings and ${compliantCount} compliant areas. Key findings include issues related to ${findingCount > 0 ? 'the identified non-compliant areas' : 'no significant areas'}.`);
+    
+    // Update audit status to "Closed" when report is generated
+    if (auditData) {
+      const updatedAudit = {
+        ...auditData,
+        status: "Closed"
+      };
+      saveAudit(updatedAudit);
+    }
   }, [auditRef, auditType, findings]);
 
   const handleExport = () => {
@@ -53,19 +62,11 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
   };
   
   const handleExportWord = () => {
-    // In a real implementation, this would generate a Word document
-    // For now, we'll just show a toast message
+    exportReportToWord(auditRef, audit?.name, summary, checklist, findings);
     toast({
-      title: "Generating Word Document",
-      description: "Your audit report is being prepared as a Word document.",
+      title: "Report Generated",
+      description: "Your audit report has been generated as a Word document.",
     });
-    
-    setTimeout(() => {
-      toast({
-        title: "Report Generated",
-        description: "Your audit report has been generated as a Word document.",
-      });
-    }, 1500);
   };
 
   const calculateFindingPercentage = () => {
@@ -169,7 +170,7 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
               <h3 className="text-lg font-semibold mb-3">Signatures</h3>
               <div className="space-y-6">
                 {audit?.assignedUsers && audit.assignedUsers
-                  .filter((user: any) => user.role === "QA" || user.role === "Qualified Auditor")
+                  .filter((user: any) => user.role === "Auditor" || user.role === "Lead Auditor")
                   .map((user: any, index: number) => (
                     <div key={index} className="grid grid-cols-3 gap-4">
                       <div className="col-span-1">

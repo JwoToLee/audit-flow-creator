@@ -6,7 +6,7 @@ export interface User {
   isAdmin: boolean;
 }
 
-export type UserRole = 'General' | 'QA' | 'Qualified Auditor' | 'Admin';
+export type UserRole = 'General' | 'Auditor' | 'Lead Auditor' | 'Admin';
 
 export interface UserWithPassword extends User {
   password: string;
