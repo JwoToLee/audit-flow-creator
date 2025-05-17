@@ -8,31 +8,37 @@ import { AuditChecklistItem, getAuditChecklist } from "@/utils/auditMatrix";
 import { exportReportToExcel } from "@/utils/excelExport";
 import { Download, FileText, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getAuditByRef } from "@/utils/auditStorage";
 
 interface AuditReportProps {
+  auditRef: string;
   auditType: string;
   findings: Record<string, { compliant: boolean; finding: string; observation: string }>;
   onNewAudit: () => void;
 }
 
-const AuditReport = ({ auditType, findings, onNewAudit }: AuditReportProps) => {
+const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportProps) => {
   const [checklist, setChecklist] = useState<AuditChecklistItem[]>([]);
   const [summary, setSummary] = useState("");
+  const [audit, setAudit] = useState<any>(null);
   const { toast } = useToast();
   
   useEffect(() => {
     const items = getAuditChecklist(auditType);
     setChecklist(items);
     
+    const auditData = getAuditByRef(auditRef);
+    setAudit(auditData);
+    
     // Generate default summary
     const compliantCount = items.filter(item => findings[item.id]?.compliant).length;
     const nonCompliantCount = items.length - compliantCount;
     
-    setSummary(`This audit identified ${compliantCount} compliant and ${nonCompliantCount} non-compliant areas. Key findings include issues related to ${nonCompliantCount > 0 ? 'the identified non-compliant areas' : 'no significant areas'}.`);
-  }, [auditType, findings]);
+    setSummary(`Audit ${auditRef} (${auditData?.name || "Unknown"}) identified ${compliantCount} compliant and ${nonCompliantCount} non-compliant areas. Key findings include issues related to ${nonCompliantCount > 0 ? 'the identified non-compliant areas' : 'no significant areas'}.`);
+  }, [auditRef, auditType, findings]);
 
   const handleExport = () => {
-    exportReportToExcel(auditType, summary, checklist, findings);
+    exportReportToExcel(auditType, summary, checklist, findings, auditRef, audit?.name);
     toast({
       title: "Export Successful",
       description: "The audit report has been exported to Excel.",
@@ -54,6 +60,11 @@ const AuditReport = ({ auditType, findings, onNewAudit }: AuditReportProps) => {
           <p className="text-gray-600">
             Review and export your audit findings and report.
           </p>
+          {auditRef && (
+            <p className="text-sm font-medium text-blue-600 mt-1">
+              Audit Reference: {auditRef} {audit?.name ? `- ${audit.name}` : ""}
+            </p>
+          )}
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
