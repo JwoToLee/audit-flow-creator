@@ -1,12 +1,23 @@
 
 import { Audit, AuditFinding } from "@/types/audit";
+import { User } from "@/types/user";
 
 // Default audit types
 export const AUDIT_TYPES = [
   "Compliance Audit",
-  "Financial Audit",
-  "Operational Audit", 
-  "IT Audit"
+  "Product Audit",
+  "Process Audit",
+  "Unannounced Audit",
+  "Unscheduled Audit"
+];
+
+// Audit status options
+export const AUDIT_STATUSES = [
+  "Not Started",
+  "Preparation",
+  "On-Site",
+  "Monitoring",
+  "Closed"
 ];
 
 // Get all audits from localStorage
@@ -19,6 +30,31 @@ export const getAudits = (): Audit[] => {
 export const getAuditByRef = (reference: string): Audit | undefined => {
   const audits = getAudits();
   return audits.find(audit => audit.reference === reference);
+};
+
+// Generate a unique audit reference
+export const generateUniqueAuditRef = (): string => {
+  const year = new Date().getFullYear();
+  const existingAudits = getAudits();
+  
+  // Extract numbers from existing audit references for this year
+  const existingRefs = existingAudits
+    .map(a => a.reference)
+    .filter(ref => ref.startsWith(`${year}AUD`))
+    .map(ref => parseInt(ref.substring(7), 10));
+  
+  // Find the maximum number and increment by 1
+  const maxNumber = existingRefs.length > 0 ? Math.max(...existingRefs) : 0;
+  const nextNumber = maxNumber + 1;
+  
+  // Format the reference with padded zeros
+  return `${year}AUD${nextNumber.toString().padStart(3, '0')}`;
+};
+
+// Check if audit reference already exists
+export const isAuditRefUnique = (reference: string): boolean => {
+  const audits = getAudits();
+  return !audits.some(audit => audit.reference === reference);
 };
 
 // Save an audit to localStorage
@@ -97,4 +133,61 @@ export const importFindingsFromCSV = (csvData: AuditFinding[]): void => {
   // Combine existing with new findings
   const combinedFindings = [...existingFindings, ...historicalFindings];
   localStorage.setItem('auditFindings', JSON.stringify(combinedFindings));
+};
+
+// User management functions
+export const getUsers = () => {
+  const users = localStorage.getItem('auditUsers');
+  return users ? JSON.parse(users) : [];
+};
+
+export const saveUser = (user: any) => {
+  const users = getUsers();
+  const existingIndex = users.findIndex((u: any) => u.id === user.id);
+  
+  if (existingIndex >= 0) {
+    users[existingIndex] = user;
+  } else {
+    users.push({
+      ...user,
+      id: user.id || crypto.randomUUID()
+    });
+  }
+  
+  localStorage.setItem('auditUsers', JSON.stringify(users));
+};
+
+export const deleteUser = (userId: string) => {
+  const users = getUsers().filter((user: any) => user.id !== userId);
+  localStorage.setItem('auditUsers', JSON.stringify(users));
+};
+
+// Get audit templates
+export const getAuditTemplates = () => {
+  const templates = localStorage.getItem('auditTemplates');
+  if (!templates) {
+    // Initialize with default templates for each audit type
+    const defaultTemplates = AUDIT_TYPES.map(type => ({
+      type,
+      objective: `Standard objective for ${type}`,
+      scope: `Standard scope for ${type}`,
+      introduction: `Introduction for ${type}`
+    }));
+    localStorage.setItem('auditTemplates', JSON.stringify(defaultTemplates));
+    return defaultTemplates;
+  }
+  return JSON.parse(templates);
+};
+
+export const saveAuditTemplate = (template: any) => {
+  const templates = getAuditTemplates();
+  const existingIndex = templates.findIndex((t: any) => t.type === template.type);
+  
+  if (existingIndex >= 0) {
+    templates[existingIndex] = template;
+  } else {
+    templates.push(template);
+  }
+  
+  localStorage.setItem('auditTemplates', JSON.stringify(templates));
 };

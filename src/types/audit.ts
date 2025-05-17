@@ -4,8 +4,19 @@ export interface Audit {
   reference: string;
   name: string;
   type: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  assignedUsers: AssignedUser[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AssignedUser {
+  id: string;
+  username: string;
+  role: string;
 }
 
 export interface AuditFinding {
@@ -21,3 +32,10 @@ export interface AuditFinding {
 export type AuditWithFindings = Audit & {
   findings: AuditFinding[];
 };
+
+export interface AuditTemplate {
+  type: string;
+  objective: string;
+  scope: string;
+  introduction: string;
+}
