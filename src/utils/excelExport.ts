@@ -1,109 +1,118 @@
 
+// Excel export functionality
 import { AuditChecklistItem } from "./auditMatrix";
 
+// Export checklist to Excel
 export const exportToExcel = (
-  auditType: string,
+  auditRef: string,
+  auditName: string,
   checklist: AuditChecklistItem[],
-  findings: Record<string, { compliant: boolean; finding: string; observation: string }>,
+  findings: Record<string, { compliant: boolean; finding: string; observation: string }>
 ) => {
-  // Convert data to CSV format
-  let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Clause,Objective,Description,Compliance Status,Finding,Observation\n";
-
-  checklist.forEach((item) => {
-    const findingData = findings[item.id] || { compliant: false, finding: "", observation: "" };
-    
-    // Format values - handle commas and quotes
-    const formatValue = (val: string) => `"${val.replace(/"/g, '""')}"`;
-    
-    // Add row for each checklist item
-    csvContent += [
-      formatValue(item.clause),
-      formatValue(item.objective),
-      formatValue(item.description),
-      formatValue(findingData.compliant ? "Compliant" : "Non-compliant"),
-      formatValue(findingData.finding),
-      formatValue(findingData.observation),
-    ].join(",") + "\n";
-  });
-
-  // Create download link
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `${auditType}_audit_checklist_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
+  // This is a placeholder for Excel export functionality
+  console.log("Exporting checklist to Excel", { auditRef, auditName, checklist, findings });
   
-  // Trigger download
-  link.click();
+  // In a real implementation, this would use a library like SheetJS/xlsx
+  // to generate an Excel file and trigger a download
   
-  // Clean up
-  document.body.removeChild(link);
+  // Mock download by creating a text file for now
+  const content = generateChecklistCSV(auditRef, auditName, checklist, findings);
+  downloadFile(content, `${auditRef}_checklist.csv`, "text/csv");
 };
 
+// Export report to Excel
 export const exportReportToExcel = (
-  auditType: string,
+  auditRef: string,
+  auditName: string | undefined,
   summary: string,
   checklist: AuditChecklistItem[],
-  findings: Record<string, { compliant: boolean; finding: string; observation: string }>,
+  findings: Record<string, { compliant: boolean; finding: string; observation: string }>
 ) => {
-  // Convert data to CSV format
-  let csvContent = "data:text/csv;charset=utf-8,";
+  // This is a placeholder for Excel export functionality
+  console.log("Exporting report to Excel", { auditRef, auditName, summary, checklist, findings });
   
-  // Add report header
-  csvContent += `"${auditType.toUpperCase()} AUDIT REPORT"\n\n`;
-  csvContent += `"Generated on: ${new Date().toLocaleString()}"\n\n`;
-  csvContent += `"EXECUTIVE SUMMARY:"\n"${summary.replace(/"/g, '""')}"\n\n`;
-  
-  // Add findings overview
-  csvContent += "FINDINGS OVERVIEW:\n";
-  csvContent += "Clause,Compliance Status,Finding\n";
-  
-  const nonCompliantItems = checklist.filter(item => !findings[item.id]?.compliant);
-  const compliantItems = checklist.filter(item => findings[item.id]?.compliant);
-  
-  // Add non-compliant items first
-  nonCompliantItems.forEach((item) => {
-    const findingData = findings[item.id];
-    csvContent += `"${item.clause}","Non-compliant","${findingData.finding.replace(/"/g, '""')}"\n`;
-  });
-  
-  // Add compliant items
-  compliantItems.forEach((item) => {
-    csvContent += `"${item.clause}","Compliant",""\n`;
-  });
-  
-  // Add detailed findings section
-  csvContent += "\nDETAILED FINDINGS:\n";
-  csvContent += "Clause,Objective,Description,Compliance Status,Finding,Observation\n";
-  
-  checklist.forEach((item) => {
-    const findingData = findings[item.id] || { compliant: false, finding: "", observation: "" };
-    
-    // Format values - handle commas and quotes
-    const formatValue = (val: string) => `"${val.replace(/"/g, '""')}"`;
-    
-    // Add row for each checklist item
-    csvContent += [
-      formatValue(item.clause),
-      formatValue(item.objective),
-      formatValue(item.description),
-      formatValue(findingData.compliant ? "Compliant" : "Non-compliant"),
-      formatValue(findingData.finding),
-      formatValue(findingData.observation),
-    ].join(",") + "\n";
-  });
+  // Mock download by creating a text file for now
+  const content = generateReportCSV(auditRef, auditName || "Unknown", summary, checklist, findings);
+  downloadFile(content, `${auditRef}_report.csv`, "text/csv");
+};
 
-  // Create download link
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `${auditType}_audit_report_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
+// Helper function to download a file
+const downloadFile = (content: string, fileName: string, contentType: string) => {
+  const a = document.createElement("a");
+  const file = new Blob([content], { type: contentType });
+  a.href = URL.createObjectURL(file);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+// Generate CSV content for checklist
+const generateChecklistCSV = (
+  auditRef: string,
+  auditName: string,
+  checklist: AuditChecklistItem[],
+  findings: Record<string, { compliant: boolean; finding: string; observation: string }>
+) => {
+  const header = "Clause,Objective,Description,Compliance Status,Finding,Observation\n";
+  const rows = checklist.map(item => {
+    const status = findings[item.id]?.compliant ? "Compliant" : "Non-compliant";
+    const finding = findings[item.id]?.finding || "";
+    const observation = findings[item.id]?.observation || "";
+    
+    // Escape fields for CSV format
+    const escapeCsv = (text: string) => `"${text.replace(/"/g, '""')}"`;
+    
+    return [
+      escapeCsv(item.clause),
+      escapeCsv(item.objective),
+      escapeCsv(item.description),
+      status,
+      escapeCsv(finding),
+      escapeCsv(observation)
+    ].join(",");
+  }).join("\n");
   
-  // Trigger download
-  link.click();
+  return `Audit Reference: ${auditRef}\nAudit Name: ${auditName}\n\n${header}${rows}`;
+};
+
+// Generate CSV content for report
+const generateReportCSV = (
+  auditRef: string,
+  auditName: string,
+  summary: string,
+  checklist: AuditChecklistItem[],
+  findings: Record<string, { compliant: boolean; finding: string; observation: string }>
+) => {
+  const compliantCount = checklist.filter(item => findings[item.id]?.compliant).length;
+  const nonCompliantCount = checklist.length - compliantCount;
+  const compliancePercentage = Math.round((compliantCount / checklist.length) * 100);
   
-  // Clean up
-  document.body.removeChild(link);
+  // Build report content
+  let content = `Audit Report\n\n`;
+  content += `Reference: ${auditRef}\n`;
+  content += `Name: ${auditName}\n\n`;
+  content += `Executive Summary:\n${summary}\n\n`;
+  content += `Compliance Overview:\n`;
+  content += `Compliance Rate: ${compliancePercentage}%\n`;
+  content += `Compliant Items: ${compliantCount}\n`;
+  content += `Non-compliant Items: ${nonCompliantCount}\n\n`;
+  
+  content += `Non-compliant Areas:\n\n`;
+  checklist.filter(item => !findings[item.id]?.compliant).forEach(item => {
+    content += `Clause: ${item.clause}\n`;
+    content += `Objective: ${item.objective}\n`;
+    content += `Finding: ${findings[item.id]?.finding || "No details provided"}\n\n`;
+  });
+  
+  content += `Compliant Areas:\n\n`;
+  checklist.filter(item => findings[item.id]?.compliant).forEach(item => {
+    content += `Clause: ${item.clause}\n`;
+    content += `Objective: ${item.objective}\n`;
+    if (findings[item.id]?.observation) {
+      content += `Observation: ${findings[item.id]?.observation}\n`;
+    }
+    content += `\n`;
+  });
+  
+  return content;
 };

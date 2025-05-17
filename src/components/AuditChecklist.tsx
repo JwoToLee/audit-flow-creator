@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AuditChecklistItem, getAuditChecklist } from "@/utils/auditMatrix";
-import { exportToExcel } from "@/utils/excelExport";
-import { Check, Download, FileText } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { getAuditByRef, getFindingsByAuditRef } from "@/utils/auditStorage";
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AuditChecklistItem, getAuditChecklist } from '@/utils/auditMatrix';
+import { exportToExcel } from '@/utils/excelExport';
+import { Check, Download, FileText } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { getAuditByRef, getFindingsByAuditRef } from '@/utils/auditStorage';
 
 interface AuditChecklistProps {
   auditRef: string;
@@ -98,7 +98,8 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
   const handleExport = () => {
     const audit = getAuditByRef(auditRef);
     if (audit) {
-      exportToExcel(auditType, checklist, findings, audit.reference, audit.name);
+      // Updated to match the expected parameter count
+      exportToExcel(auditRef, audit.name, checklist, findings);
       toast({
         title: "Export Successful",
         description: "The audit checklist has been exported to Excel.",

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,7 +37,7 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
   }, [auditRef, auditType, findings]);
 
   const handleExport = () => {
-    exportReportToExcel(auditType, summary, checklist, findings, auditRef, audit?.name);
+    exportReportToExcel(auditRef, audit?.name, summary, checklist, findings);
     toast({
       title: "Export Successful",
       description: "The audit report has been exported to Excel.",
