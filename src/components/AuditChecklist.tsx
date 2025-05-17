@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AuditChecklistItem, getAuditChecklist } from '@/utils/auditMatrix';
 import { exportToExcel } from '@/utils/excelExport';
-import { Check, Download, FileText } from 'lucide-react';
+import { Check, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { getAuditByRef, getFindingsByAuditRef } from '@/utils/auditStorage';
 
@@ -18,7 +19,14 @@ interface AuditChecklistProps {
 
 const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps) => {
   const [checklist, setChecklist] = useState<AuditChecklistItem[]>([]);
-  const [findings, setFindings] = useState<Record<string, { compliant: boolean; finding: string; observation: string }>>({});
+  const [findings, setFindings] = useState<Record<string, { 
+    hasFinding: boolean; 
+    finding: string; 
+    observation: string;
+    staffNumber?: string;
+    staffName?: string;
+    staffScope?: string;
+  }>>({});
   const { toast } = useToast();
   
   useEffect(() => {
@@ -26,9 +34,16 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
     setChecklist(items);
     
     // Initialize findings
-    const initialFindings: Record<string, { compliant: boolean; finding: string; observation: string }> = {};
+    const initialFindings: Record<string, any> = {};
     items.forEach(item => {
-      initialFindings[item.id] = { compliant: false, finding: "", observation: "" };
+      initialFindings[item.id] = { 
+        hasFinding: false, 
+        finding: "", 
+        observation: "",
+        staffNumber: "",
+        staffName: "",
+        staffScope: ""
+      };
     });
 
     // Check for historical findings
@@ -56,14 +71,14 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
     setFindings(initialFindings);
   }, [auditRef, auditType, toast]);
 
-  const handleComplianceChange = (id: string, checked: boolean) => {
+  const handleFindingChange = (id: string, checked: boolean) => {
     setFindings(prev => ({
       ...prev,
-      [id]: { ...prev[id], compliant: checked }
+      [id]: { ...prev[id], hasFinding: checked }
     }));
   };
 
-  const handleFindingChange = (id: string, value: string) => {
+  const handleFindingTextChange = (id: string, value: string) => {
     setFindings(prev => ({
       ...prev,
       [id]: { ...prev[id], finding: value }
@@ -76,17 +91,24 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
       [id]: { ...prev[id], observation: value }
     }));
   };
+  
+  const handleStaffInfoChange = (id: string, field: string, value: string) => {
+    setFindings(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value }
+    }));
+  };
 
   const handleSubmit = () => {
-    // Validate that all required items have findings if non-compliant
+    // Validate that all required items have findings details if finding is checked
     const incompleteItems = checklist
-      .filter(item => item.required && !findings[item.id].compliant && !findings[item.id].finding)
+      .filter(item => item.required && findings[item.id].hasFinding && !findings[item.id].finding)
       .map(item => item.clause);
     
     if (incompleteItems.length > 0) {
       toast({
         title: "Incomplete Audit",
-        description: `Please add findings for the following non-compliant items: ${incompleteItems.join(", ")}`,
+        description: `Please add finding details for: ${incompleteItems.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -98,13 +120,17 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
   const handleExport = () => {
     const audit = getAuditByRef(auditRef);
     if (audit) {
-      // Updated to match the expected parameter count
       exportToExcel(auditRef, audit.name, checklist, findings);
       toast({
         title: "Export Successful",
         description: "The audit checklist has been exported to Excel.",
       });
     }
+  };
+  
+  // Helper function to determine if a clause needs staff info
+  const needsStaffInfo = (clause: string) => {
+    return clause.includes("145.A.35"); // Example - can be expanded with more clause IDs
   };
 
   if (checklist.length === 0) {
@@ -119,7 +145,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
             {auditType.charAt(0).toUpperCase() + auditType.slice(1)} Audit Checklist
           </h2>
           <p className="text-gray-600">
-            Complete the checklist by marking compliance status and adding findings where necessary.
+            Complete the checklist by identifying findings and adding observations
           </p>
           {auditRef && (
             <p className="text-sm font-medium text-blue-600 mt-1">
@@ -136,6 +162,7 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
       <div className="space-y-6">
         {checklist.map((item) => {
           const hasHistoricalFinding = findings[item.id]?.finding?.startsWith('[Previous finding');
+          const needsStaff = needsStaffInfo(item.clause);
           
           return (
             <Card key={item.id} className={`border-l-4 ${hasHistoricalFinding ? 'border-l-amber-500' : 'border-l-blue-500'}`}>
@@ -156,29 +183,58 @@ const AuditChecklist = ({ auditRef, auditType, onComplete }: AuditChecklistProps
                     <p className="text-gray-600">{item.description}</p>
                   </div>
                   
+                  {needsStaff && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 pb-3 border-b border-gray-200">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-700">Staff Number</p>
+                        <Input 
+                          placeholder="Enter staff number"
+                          value={findings[item.id]?.staffNumber || ""}
+                          onChange={(e) => handleStaffInfoChange(item.id, "staffNumber", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-700">Staff Name</p>
+                        <Input 
+                          placeholder="Enter staff name"
+                          value={findings[item.id]?.staffName || ""}
+                          onChange={(e) => handleStaffInfoChange(item.id, "staffName", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-700">Staff Scope</p>
+                        <Input 
+                          placeholder="Enter scope of work"
+                          value={findings[item.id]?.staffScope || ""}
+                          onChange={(e) => handleStaffInfoChange(item.id, "staffScope", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center space-x-2 pt-2">
                     <Checkbox
-                      id={`compliance-${item.id}`}
-                      checked={findings[item.id]?.compliant || false}
-                      onCheckedChange={(checked) => handleComplianceChange(item.id, checked === true)}
+                      id={`finding-${item.id}`}
+                      checked={findings[item.id]?.hasFinding || false}
+                      onCheckedChange={(checked) => handleFindingChange(item.id, checked === true)}
                     />
                     <label
-                      htmlFor={`compliance-${item.id}`}
+                      htmlFor={`finding-${item.id}`}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      Compliant
+                      Finding Identified
                     </label>
                   </div>
                   
-                  {!findings[item.id]?.compliant && (
+                  {findings[item.id]?.hasFinding && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">
-                        Finding{item.required ? "*" : ""}:
+                        Finding Details{item.required ? "*" : ""}:
                       </label>
                       <Textarea
                         value={findings[item.id]?.finding || ""}
-                        onChange={(e) => handleFindingChange(item.id, e.target.value)}
-                        placeholder="Describe the non-compliance issue"
+                        onChange={(e) => handleFindingTextChange(item.id, e.target.value)}
+                        placeholder="Describe the finding in detail"
                         className={`resize-none ${hasHistoricalFinding ? 'bg-amber-50' : ''}`}
                         rows={3}
                       />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -5,14 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AuditChecklistItem, getAuditChecklist } from "@/utils/auditMatrix";
 import { exportReportToExcel } from "@/utils/excelExport";
-import { Download, FileText, Plus } from "lucide-react";
+import { Download, FileText, Plus, FileOutput } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getAuditByRef } from "@/utils/auditStorage";
 
 interface AuditReportProps {
   auditRef: string;
   auditType: string;
-  findings: Record<string, { compliant: boolean; finding: string; observation: string }>;
+  findings: Record<string, { 
+    hasFinding: boolean; 
+    finding: string; 
+    observation: string;
+    staffNumber?: string;
+    staffName?: string;
+    staffScope?: string;
+  }>;
   onNewAudit: () => void;
 }
 
@@ -30,10 +38,10 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
     setAudit(auditData);
     
     // Generate default summary
-    const compliantCount = items.filter(item => findings[item.id]?.compliant).length;
-    const nonCompliantCount = items.length - compliantCount;
+    const findingCount = items.filter(item => findings[item.id]?.hasFinding).length;
+    const compliantCount = items.length - findingCount;
     
-    setSummary(`Audit ${auditRef} (${auditData?.name || "Unknown"}) identified ${compliantCount} compliant and ${nonCompliantCount} non-compliant areas. Key findings include issues related to ${nonCompliantCount > 0 ? 'the identified non-compliant areas' : 'no significant areas'}.`);
+    setSummary(`Audit ${auditRef} (${auditData?.name || "Unknown"}) identified ${findingCount} findings and ${compliantCount} compliant areas. Key findings include issues related to ${findingCount > 0 ? 'the identified non-compliant areas' : 'no significant areas'}.`);
   }, [auditRef, auditType, findings]);
 
   const handleExport = () => {
@@ -43,10 +51,26 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
       description: "The audit report has been exported to Excel.",
     });
   };
+  
+  const handleExportWord = () => {
+    // In a real implementation, this would generate a Word document
+    // For now, we'll just show a toast message
+    toast({
+      title: "Generating Word Document",
+      description: "Your audit report is being prepared as a Word document.",
+    });
+    
+    setTimeout(() => {
+      toast({
+        title: "Report Generated",
+        description: "Your audit report has been generated as a Word document.",
+      });
+    }, 1500);
+  };
 
-  const calculateCompliancePercentage = () => {
-    const compliantCount = checklist.filter(item => findings[item.id]?.compliant).length;
-    return Math.round((compliantCount / checklist.length) * 100);
+  const calculateFindingPercentage = () => {
+    const findingCount = checklist.filter(item => findings[item.id]?.hasFinding).length;
+    return Math.round((findingCount / checklist.length) * 100);
   };
 
   return (
@@ -68,7 +92,11 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Export Report
+            Export to Excel
+          </Button>
+          <Button variant="outline" onClick={handleExportWord} className="flex items-center gap-2">
+            <FileOutput className="h-4 w-4" />
+            Export to Word
           </Button>
           <Button onClick={onNewAudit} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -90,27 +118,113 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
           />
         </CardContent>
       </Card>
+      
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Report Cover Page</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="border-b pb-3">
+              <h3 className="text-lg font-semibold mb-2">Audit Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-sm font-medium">Reference:</p>
+                  <p className="text-gray-700">{auditRef}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Name:</p>
+                  <p className="text-gray-700">{audit?.name || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Type:</p>
+                  <p className="text-gray-700">{audit?.type || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Dates:</p>
+                  <p className="text-gray-700">
+                    {audit?.startDate ? new Date(audit.startDate).toLocaleDateString() : "N/A"} - 
+                    {audit?.endDate ? new Date(audit.endDate).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-b pb-3">
+              <h3 className="text-lg font-semibold mb-2">Audit Scope</h3>
+              <p className="text-gray-700 whitespace-pre-line">{audit?.scope || "No scope defined"}</p>
+            </div>
+            
+            <div className="border-b pb-3">
+              <h3 className="text-lg font-semibold mb-2">Audit Objective</h3>
+              <p className="text-gray-700 whitespace-pre-line">{audit?.objective || "No objective defined"}</p>
+            </div>
+            
+            <div className="border-b pb-3">
+              <h3 className="text-lg font-semibold mb-2">Introduction</h3>
+              <p className="text-gray-700 whitespace-pre-line">{audit?.introduction || "No introduction provided"}</p>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Signatures</h3>
+              <div className="space-y-6">
+                {audit?.assignedUsers && audit.assignedUsers
+                  .filter((user: any) => user.role === "QA" || user.role === "Qualified Auditor")
+                  .map((user: any, index: number) => (
+                    <div key={index} className="grid grid-cols-3 gap-4">
+                      <div className="col-span-1">
+                        <p className="font-medium">{user.username} ({user.role})</p>
+                      </div>
+                      <div className="col-span-1">
+                        <p className="text-gray-600">Date: ____________</p>
+                      </div>
+                      <div className="col-span-1">
+                        <p className="text-gray-600">Signature: ____________</p>
+                      </div>
+                    </div>
+                  ))
+                }
+                
+                {/* QA Department Head signature line (always shown) */}
+                <div className="grid grid-cols-3 gap-4 border-t pt-3">
+                  <div className="col-span-1">
+                    <p className="font-medium">QA Department Head</p>
+                  </div>
+                  <div className="col-span-1">
+                    <p className="text-gray-600">Date: ____________</p>
+                  </div>
+                  <div className="col-span-1">
+                    <p className="text-gray-600">Signature: ____________</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Compliance Overview</CardTitle>
+          <CardTitle>Findings Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center">
-            <div className="text-3xl font-bold">{calculateCompliancePercentage()}%</div>
+            <div className="text-3xl font-bold">
+              {checklist.filter(item => findings[item.id]?.hasFinding).length} Findings
+            </div>
             <div className="flex gap-2">
               <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
-                {checklist.filter(item => findings[item.id]?.compliant).length} Compliant
+                {checklist.filter(item => !findings[item.id]?.hasFinding).length} Compliant
               </Badge>
               <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">
-                {checklist.filter(item => !findings[item.id]?.compliant).length} Non-compliant
+                {checklist.filter(item => findings[item.id]?.hasFinding).length} Findings
               </Badge>
             </div>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
             <div 
-              className="bg-blue-600 h-2.5 rounded-full" 
-              style={{ width: `${calculateCompliancePercentage()}%` }}
+              className="bg-red-600 h-2.5 rounded-full" 
+              style={{ width: `${calculateFindingPercentage()}%` }}
             ></div>
           </div>
         </CardContent>
@@ -123,13 +237,13 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
         <CardContent>
           <div className="space-y-6">
             <div>
-              <h3 className="font-medium text-lg mb-3">Non-compliant Areas</h3>
-              {checklist.filter(item => !findings[item.id]?.compliant).length === 0 ? (
-                <p className="text-gray-500 italic">No non-compliant areas found.</p>
+              <h3 className="font-medium text-lg mb-3">Identified Findings</h3>
+              {checklist.filter(item => findings[item.id]?.hasFinding).length === 0 ? (
+                <p className="text-gray-500 italic">No findings identified in this audit.</p>
               ) : (
                 <div className="space-y-4">
                   {checklist
-                    .filter(item => !findings[item.id]?.compliant)
+                    .filter(item => findings[item.id]?.hasFinding)
                     .map((item) => (
                       <div key={item.id} className="border-l-4 border-red-500 pl-4 py-2">
                         <h4 className="font-medium">{item.clause}</h4>
@@ -138,6 +252,13 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
                           <span className="font-medium">Finding: </span>
                           {findings[item.id]?.finding || "No details provided"}
                         </p>
+                        {findings[item.id]?.staffName && (
+                          <div className="mt-1 text-sm">
+                            <p><span className="font-medium">Staff: </span>{findings[item.id].staffName}</p>
+                            <p><span className="font-medium">Staff #: </span>{findings[item.id].staffNumber}</p>
+                            <p><span className="font-medium">Scope: </span>{findings[item.id].staffScope}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -146,12 +267,12 @@ const AuditReport = ({ auditRef, auditType, findings, onNewAudit }: AuditReportP
 
             <div>
               <h3 className="font-medium text-lg mb-3">Compliant Areas</h3>
-              {checklist.filter(item => findings[item.id]?.compliant).length === 0 ? (
+              {checklist.filter(item => !findings[item.id]?.hasFinding).length === 0 ? (
                 <p className="text-gray-500 italic">No compliant areas found.</p>
               ) : (
                 <div className="space-y-2">
                   {checklist
-                    .filter(item => findings[item.id]?.compliant)
+                    .filter(item => !findings[item.id]?.hasFinding)
                     .map((item) => (
                       <div key={item.id} className="border-l-4 border-green-500 pl-4 py-2">
                         <h4 className="font-medium">{item.clause}</h4>

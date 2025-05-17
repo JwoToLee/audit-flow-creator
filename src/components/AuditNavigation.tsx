@@ -1,11 +1,12 @@
 
 import React from "react";
-import { ClipboardCheck, FileText, ListChecks } from "lucide-react";
+import { ClipboardCheck, FileText, ListChecks, CalendarRange } from "lucide-react";
 
 interface AuditNavigationProps {
-  currentStep: "select" | "checklist" | "report";
-  onStepChange: (step: "select" | "checklist" | "report") => void;
+  currentStep: "select" | "preparation" | "checklist" | "report";
+  onStepChange: (step: "select" | "preparation" | "checklist" | "report") => void;
   canNavigate: {
+    preparation: boolean;
     checklist: boolean;
     report: boolean;
   };
@@ -14,6 +15,7 @@ interface AuditNavigationProps {
 const AuditNavigation = ({ currentStep, onStepChange, canNavigate }: AuditNavigationProps) => {
   const steps = [
     { id: "select", name: "Select Audit Type", icon: ListChecks },
+    { id: "preparation", name: "Audit Preparation", icon: CalendarRange },
     { id: "checklist", name: "Complete Checklist", icon: ClipboardCheck },
     { id: "report", name: "Generate Report", icon: FileText },
   ];
@@ -22,15 +24,17 @@ const AuditNavigation = ({ currentStep, onStepChange, canNavigate }: AuditNaviga
     <nav aria-label="Progress">
       <ol className="flex items-center space-x-4 md:space-x-8">
         {steps.map((step, stepIdx) => {
-          const stepId = step.id as "select" | "checklist" | "report";
+          const stepId = step.id as "select" | "preparation" | "checklist" | "report";
           const isActive = currentStep === stepId;
           const isCompleted = 
             (stepId === "select") ||
+            (stepId === "preparation" && (canNavigate.checklist || canNavigate.report)) ||
             (stepId === "checklist" && canNavigate.report) ||
             (stepId === "report" && false);
             
           const canClick = 
             stepId === "select" || 
+            (stepId === "preparation" && canNavigate.preparation) ||
             (stepId === "checklist" && canNavigate.checklist) ||
             (stepId === "report" && canNavigate.report);
 

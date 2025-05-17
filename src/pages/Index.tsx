@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AuditTypeSelector from "@/components/AuditTypeSelector";
+import AuditPreparation from "@/components/AuditPreparation";
 import AuditChecklist from "@/components/AuditChecklist";
 import AuditReport from "@/components/AuditReport";
 import AuditNavigation from "@/components/AuditNavigation";
@@ -11,7 +12,7 @@ import { getAuditByRef } from "@/utils/auditStorage";
 import { useAuth } from "@/utils/authContext";
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<"select" | "checklist" | "report">("select");
+  const [currentStep, setCurrentStep] = useState<"select" | "preparation" | "checklist" | "report">("select");
   const [selectedAuditRef, setSelectedAuditRef] = useState<string | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
   const [auditFindings, setAuditFindings] = useState<Record<string, any>>({});
@@ -27,6 +28,10 @@ const Index = () => {
 
   const handleAuditSelect = (auditRef: string) => {
     setSelectedAuditRef(auditRef);
+    setCurrentStep("preparation");
+  };
+
+  const handlePreparationComplete = () => {
     setCurrentStep("checklist");
   };
 
@@ -56,6 +61,7 @@ const Index = () => {
           currentStep={currentStep} 
           onStepChange={setCurrentStep}
           canNavigate={{
+            preparation: !!selectedAuditRef,
             checklist: !!selectedAuditRef,
             report: Object.keys(auditFindings).length > 0
           }}
@@ -64,6 +70,13 @@ const Index = () => {
         <div className="mt-8 bg-white shadow rounded-lg">
           {currentStep === "select" && (
             <AuditTypeSelector onSelectAudit={handleAuditSelect} />
+          )}
+          
+          {currentStep === "preparation" && selectedAuditRef && (
+            <AuditPreparation 
+              auditRef={selectedAuditRef}
+              onComplete={handlePreparationComplete}
+            />
           )}
           
           {currentStep === "checklist" && selectedAudit && (

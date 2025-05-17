@@ -11,6 +11,9 @@ export interface Audit {
   assignedUsers: AssignedUser[];
   createdAt: string;
   updatedAt: string;
+  objective?: string;
+  scope?: string;
+  introduction?: string;
 }
 
 export interface AssignedUser {
@@ -27,6 +30,9 @@ export interface AuditFinding {
   observation: string;
   year: string;
   isHistorical: boolean;
+  staffNumber?: string;
+  staffName?: string;
+  staffScope?: string;
 }
 
 export type AuditWithFindings = Audit & {
